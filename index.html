@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en" ng-app="spendWiseApp">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101b2d">
+  <meta name="description" content="SpendWise — a simple personal finance tracker.">
+  <title>SpendWise — Personal Finance</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- AngularJS is loaded from a pinned CDN. A fallback is provided if the first CDN is unavailable. -->
+  <script src="https://cdn.jsdelivr.net/npm/angular@1.8.3/angular.min.js"
+          onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.8.3/angular.min.js'"></script>
+  <script>
+    window.addEventListener('load', function () {
+      if (!window.angular) {
+        document.documentElement.classList.add('angular-load-failed');
+      }
+    });
+  </script>
+</head>
+<body ng-controller="MainController as vm" ng-cloak>
+  <div class="app-shell">
+    <aside class="sidebar" ng-class="{'sidebar-open':vm.mobileMenu}">
+      <a class="brand" href="#dashboard" ng-click="vm.go('dashboard')">
+        <span class="brand-mark">S</span>
+        <span>spendwise<small>PERSONAL FINANCE</small></span>
+      </a>
+      <div class="side-label">WORKSPACE</div>
+      <nav class="nav-list">
+        <button ng-repeat="item in vm.nav" ng-class="{active:vm.page===item.id}" ng-click="vm.go(item.id)">
+          <span class="nav-icon">{{item.icon}}</span>{{item.label}}
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="side-tip"><span>✦</span><b>Build better money habits.</b><p>Small steps today. A stronger financial future tomorrow.</p></div>
+        <button class="profile-mini" ng-click="vm.go('settings')">
+          <span class="avatar">{{(vm.settings.name || 'U').charAt(0).toUpperCase()}}</span>
+          <span><b>{{vm.settings.name || 'Your account'}}</b><small>Personal account</small></span>
+          <span class="profile-more">⚙</span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu" ng-click="vm.mobileMenu=!vm.mobileMenu">☰</button>
+        <div class="breadcrumb">Workspace <span>/</span> {{vm.pageTitle}}</div>
+        <div class="top-actions">
+          <span class="today">{{vm.today | date:'EEE, d MMM yyyy'}}</span>
+          <button class="icon-button" title="Settings" ng-click="vm.go('settings')">⚙</button>
+          <span class="avatar small-avatar">{{(vm.settings.name || 'U').charAt(0).toUpperCase()}}</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <section ng-show="vm.page==='dashboard'">
+          <div class="page-heading">
+            <div><div class="eyebrow">{{vm.greeting}} · {{vm.today | date:'EEEE, d MMMM yyyy'}}</div><h1>Good {{vm.greeting.toLowerCase()}}, {{vm.settings.name || 'there'}}.</h1><p>Here’s your financial overview.</p></div>
+            <button class="primary-button" ng-click="vm.openTransaction()">＋ Add transaction</button>
+          </div>
+          <div class="month-row">
+            <label>Month <input type="month" ng-model="vm.selectedMonth" ng-change="vm.refresh()"></label>
+            <span class="muted">Your numbers update for the selected month</span>
+          </div>
+          <div class="stats-grid">
+            <article class="stat-card balance-card"><div class="stat-top"><span>Available balance</span><span class="stat-symbol">◈</span></div><div class="stat-value">{{vm.money(vm.balance)}}</div><div class="stat-foot">Net cash flow for selected month</div></article>
+            <article class="stat-card"><div class="stat-top"><span>Total income</span><span class="stat-symbol green">↗</span></div><div class="stat-value">{{vm.money(vm.income)}}</div><div class="stat-foot">Money received this month</div></article>
+            <article class="stat-card"><div class="stat-top"><span>Total expenses</span><span class="stat-symbol red">↘</span></div><div class="stat-value">{{vm.money(vm.expenses)}}</div><div class="stat-foot">Money spent this month</div></article>
+            <article class="stat-card"><div class="stat-top"><span>Savings rate</span><span class="stat-symbol purple">✧</span></div><div class="stat-value">{{vm.savingsRate | number:1}}%</div><div class="stat-foot">Of your income retained</div></article>
+          </div>
+
+          <div class="two-column">
+            <article class="panel chart-panel">
+              <div class="panel-heading"><div><h2>Cash flow overview</h2><p>Income vs expenses · Last 6 months</p></div><span class="legend"><i class="dot income-dot"></i> Income <i class="dot expense-dot"></i> Expenses</span></div>
+              <div class="bar-chart">
+                <div class="chart-y"><span>{{vm.moneyCompact(vm.chartMax)}}</span><span>{{vm.moneyCompact(vm.chartMax*.66)}}</span><span>{{vm.moneyCompact(vm.chartMax*.33)}}</span><span>0</span></div>
+                <div class="chart-columns"><div class="month-column" ng-repeat="m in vm.monthlyFlow"><div class="bars"><span class="bar income-bar" ng-style="{height:vm.barHeight(m.income)+'%'}" title="Income {{vm.money(m.income)}}"></span><span class="bar expense-bar" ng-style="{height:vm.barHeight(m.expenses)+'%'}" title="Expenses {{vm.money(m.expenses)}}"></span></div><small>{{m.label}}</small></div></div>
+              </div>
+            </article>
+            <article class="panel breakdown-panel">
+              <div class="panel-heading"><div><h2>Spending breakdown</h2><p>Where your money goes</p></div><span class="panel-kebab">•••</span></div>
+              <div class="donut-wrap"><div class="donut" ng-style="{'background':vm.donutStyle}"><div class="donut-hole"><b>{{vm.money(vm.expenses)}}</b><small>Total spent</small></div></div></div>
+              <div class="category-legend" ng-if="vm.categoryBreakdown.length"><div ng-repeat="cat in vm.categoryBreakdown"><span class="legend-name"><i class="dot" ng-style="{'background':cat.color}"></i>{{cat.name}}</span><b>{{cat.percent | number:0}}%</b></div></div>
+              <div class="empty-small" ng-if="!vm.categoryBreakdown.length">No spending recorded yet.</div>
+            </article>
+          </div>
+
+          <div class="two-column lower-grid">
+            <article class="panel">
+              <div class="panel-heading"><div><h2>Recent transactions</h2><p>Your latest financial activity</p></div><button class="text-button" ng-click="vm.go('transactions')">View all →</button></div>
+              <div class="transaction-list" ng-if="vm.recent.length"><div class="transaction-row" ng-repeat="t in vm.recent"><span class="category-icon">{{vm.categoryIcon(t.category)}}</span><span class="transaction-info"><b>{{t.title}}</b><small>{{t.category}} · {{t.date | date:'d MMM yyyy'}}</small></span><strong ng-class="t.type==='Income'?'amount-positive':'amount-negative'">{{t.type==='Income'?'+':'−'}}{{vm.money(t.amount)}}</strong></div></div>
+              <div class="empty-state" ng-if="!vm.recent.length"><span>◫</span><b>No transactions yet</b><p>Add your first transaction to see your financial activity.</p><button class="outline-button" ng-click="vm.openTransaction()">Add transaction</button></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading"><div><h2>Budget overview</h2><p>Track your monthly spending limits</p></div><button class="text-button" ng-click="vm.go('budgets')">Manage →</button></div>
+              <div class="budget-preview" ng-repeat="b in vm.budgetSummary"><div class="budget-line"><b>{{b.category}}</b><span>{{vm.money(b.spent)}} <em>/ {{vm.money(b.limit)}}</em></span></div><div class="progress-track"><div class="progress-fill" ng-class="{'over':b.percent>100}" ng-style="{width:vm.progressWidth(b.percent)}"></div></div><small>{{b.percent>100?'Over budget by '+vm.money(b.spent-b.limit):vm.money(b.limit-b.spent)+' remaining'}}</small></div>
+              <div class="empty-state compact" ng-if="!vm.budgetSummary.length"><b>No budgets yet</b><p>Create a budget to start tracking.</p><button class="outline-button" ng-click="vm.go('budgets')">Create budget</button></div>
+            </article>
+          </div>
+          <div class="saving-banner"><span class="saving-icon">✦</span><div><small>YOUR MONTHLY SAVINGS</small><b>{{vm.money(vm.balance)}}</b><p>{{vm.balance>=0?'You are keeping more than you spend. Keep it up!':'Your expenses are higher than your income this month.'}}</p></div></div>
+        </section>
+
+        <section ng-show="vm.page==='transactions'">
+          <div class="page-heading"><div><h1>All transactions</h1><p>Review and manage your financial activity.</p></div><button class="primary-button" ng-click="vm.openTransaction()">＋ Add transaction</button></div>
+          <div class="panel">
+            <div class="filter-row"><input class="search-input" type="search" placeholder="Search transactions..." ng-model="vm.filters.search"><select ng-model="vm.filters.type"><option value="">All types</option><option>Income</option><option>Expense</option></select><select ng-model="vm.filters.category"><option value="">All categories</option><option ng-repeat="c in vm.categories">{{c.name}}</option></select><input type="month" ng-model="vm.selectedMonth" ng-change="vm.refresh()"></div>
+            <div class="table-wrap"><table><thead><tr><th>TRANSACTION</th><th>CATEGORY</th><th>DATE</th><th>TYPE</th><th class="right">AMOUNT</th><th></th></tr></thead><tbody><tr ng-repeat="t in vm.filteredTransactions()"><td><b>{{t.title}}</b><small class="table-note">{{t.note || 'Personal transaction'}}</small></td><td>{{t.category}}</td><td>{{t.date | date:'d MMM yyyy'}}</td><td><span class="type-pill" ng-class="t.type==='Income'?'type-income':'type-expense'">{{t.type}}</span></td><td class="right" ng-class="t.type==='Income'?'amount-positive':'amount-negative'">{{t.type==='Income'?'+':'−'}}{{vm.money(t.amount)}}</td><td class="actions-cell"><button ng-click="vm.editTransaction(t)" title="Edit">✎</button><button ng-click="vm.deleteTransaction(t)" title="Delete">×</button></td></tr></tbody></table></div>
+            <div class="empty-state" ng-if="!vm.filteredTransactions().length"><b>No matching transactions</b><p>Try changing your filters or add a transaction.</p></div>
+          </div>
+        </section>
+
+        <section ng-show="vm.page==='budgets'">
+          <div class="page-heading"><div><h1>Monthly budgets</h1><p>Set spending limits and stay in control.</p></div><button class="primary-button" ng-click="vm.openBudget()">＋ Create budget</button></div>
+          <div class="budget-grid"><article class="panel budget-card" ng-repeat="b in vm.budgetSummary"><div class="budget-card-top"><span class="category-icon">{{vm.categoryIcon(b.category)}}</span><button class="dots-button" ng-click="vm.editBudget(b)">•••</button></div><h3>{{b.category}}</h3><div class="budget-amount">{{vm.money(b.spent)}} <small>/ {{vm.money(b.limit)}}</small></div><div class="progress-track"><div class="progress-fill" ng-class="{'over':b.percent>100}" ng-style="{width:vm.progressWidth(b.percent)}"></div></div><div class="budget-meta">{{b.percent | number:0}}% used <span>{{b.percent>100?'Budget exceeded':vm.money(b.limit-b.spent)+' remaining'}}</span></div><div class="budget-actions"><button ng-click="vm.editBudget(b)">Edit</button><button ng-click="vm.deleteBudget(b)">Delete</button></div></article></div>
+          <div class="panel empty-state" ng-if="!vm.budgetSummary.length"><b>No budgets created</b><p>Create a category budget to start monitoring your expenses.</p><button class="primary-button" ng-click="vm.openBudget()">Create your first budget</button></div>
+        </section>
+
+        <section ng-show="vm.page==='reports'">
+          <div class="page-heading"><div><h1>Reports</h1><p>A clearer picture of your money.</p></div><label class="month-picker">Month <input type="month" ng-model="vm.selectedMonth" ng-change="vm.refresh()"></label></div>
+          <div class="stats-grid report-stats"><article class="stat-card"><div class="stat-top">Income</div><div class="stat-value">{{vm.money(vm.income)}}</div><div class="stat-foot">Selected month</div></article><article class="stat-card"><div class="stat-top">Expenses</div><div class="stat-value">{{vm.money(vm.expenses)}}</div><div class="stat-foot">Selected month</div></article><article class="stat-card"><div class="stat-top">Net savings</div><div class="stat-value">{{vm.money(vm.balance)}}</div><div class="stat-foot">Income minus expenses</div></article><article class="stat-card"><div class="stat-top">Transactions</div><div class="stat-value">{{vm.monthTransactions.length}}</div><div class="stat-foot">Recorded this month</div></article></div>
+          <article class="panel"><div class="panel-heading"><div><h2>Expense by category</h2><p>Category-level breakdown for the selected month</p></div></div><div class="report-category" ng-repeat="c in vm.categoryBreakdown"><div><span><i class="dot" ng-style="{'background':c.color}"></i><b>{{c.name}}</b></span><strong>{{vm.money(c.amount)}}</strong></div><div class="progress-track"><div class="progress-fill" ng-style="{width:c.percent+'%',background:c.color}"></div></div><small>{{c.percent | number:1}}% of expenses</small></div><div class="empty-state" ng-if="!vm.categoryBreakdown.length"><b>No report data yet</b><p>Add expense transactions to generate a breakdown.</p></div></article>
+          <div class="panel export-panel"><div><h2>Export your transactions</h2><p>Download a CSV copy of your records.</p></div><button class="outline-button" ng-click="vm.exportCsv()">↓ Export CSV</button></div>
+        </section>
+
+        <section ng-show="vm.page==='settings'">
+          <div class="page-heading"><div><h1>Personal preferences</h1><p>Customize how SpendWise works for you.</p></div></div>
+          <div class="panel settings-panel"><label>Display name<input type="text" ng-model="vm.settings.name" placeholder="Your name"></label><label>Currency<select ng-model="vm.settings.currency"><option value="INR">Indian Rupee (₹)</option><option value="USD">US Dollar ($)</option><option value="EUR">Euro (€)</option><option value="GBP">British Pound (£)</option></select></label><label>Monthly income target<input type="number" min="0" ng-model="vm.settings.incomeTarget" placeholder="0"></label><div class="settings-actions"><button class="primary-button" ng-click="vm.saveSettings()">Save preferences</button><button class="danger-button" ng-click="vm.resetData()">Reset all data</button></div></div>
+          <div class="panel data-note"><h2>About your data</h2><p>Your transactions are stored in this browser using localStorage. They are not uploaded to a server. Clearing browser data will remove them. This prototype does not provide cloud backup or multi-user accounts.</p></div>
+        </section>
+
+        <footer>© {{vm.today | date:'yyyy'}} SpendWise <span>Made for smarter money management ✦</span></footer>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.transactionModal" ng-click="vm.closeModals()">
+    <div class="modal" ng-click="$event.stopPropagation()"><div class="modal-header"><div><small>TRANSACTION DETAILS</small><h2>{{vm.form.id?'Edit transaction':'Add transaction'}}</h2><p>Enter the details of your financial activity.</p></div><button class="close-button" ng-click="vm.closeModals()">×</button></div>
+      <form ng-submit="vm.saveTransaction()" novalidate><label>Transaction name<input required ng-model="vm.form.title" placeholder="e.g. Grocery shopping"></label><div class="form-two"><label>Amount ({{vm.currencySymbol()}})<input required type="number" min="0.01" step="0.01" ng-model="vm.form.amount"></label><label>Type<select ng-model="vm.form.type"><option>Expense</option><option>Income</option></select></label></div><label>Category<select ng-model="vm.form.category"><option ng-repeat="c in vm.categories">{{c.name}}</option></select></label><label>Date<input required type="date" ng-model="vm.form.date"></label><label>Note (optional)<textarea ng-model="vm.form.note" rows="2" placeholder="Add a note..."></textarea></label><div class="modal-actions"><button type="button" class="outline-button" ng-click="vm.closeModals()">Cancel</button><button type="submit" class="primary-button">Save transaction</button></div></form>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" ng-if="vm.budgetModal" ng-click="vm.closeModals()">
+    <div class="modal small-modal" ng-click="$event.stopPropagation()"><div class="modal-header"><div><small>BUDGET PLANNER</small><h2>{{vm.budgetForm.id?'Edit budget':'Create a budget'}}</h2><p>Choose a category and set its monthly limit.</p></div><button class="close-button" ng-click="vm.closeModals()">×</button></div>
+      <form ng-submit="vm.saveBudget()"><label>Category<select ng-model="vm.budgetForm.category"><option ng-repeat="c in vm.categories">{{c.name}}</option></select></label><label>Monthly limit ({{vm.currencySymbol()}})<input required type="number" min="1" ng-model="vm.budgetForm.limit"></label><div class="modal-actions"><button type="button" class="outline-button" ng-click="vm.closeModals()">Cancel</button><button type="submit" class="primary-button">Save budget</button></div></form>
+    </div>
+  </div>
+
+  <div class="toast" ng-if="vm.toast">{{vm.toast}}</div>
+  <div class="load-error"><h2>SpendWise could not start</h2><p>AngularJS did not load. Check your internet connection or try refreshing the page. The app uses a fallback CDN automatically.</p></div>
+  <script src="js/app.js"></script>
+</body>
+</html>
